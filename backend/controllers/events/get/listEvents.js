@@ -7,9 +7,10 @@ const listEvents = async (req, res, next) => {
 		connection = await getDB();
 
 		const [results] = await connection.query(`
-			SELECT events.id, events.council.id, events.type, events.description, events.created_at, events.modified_at, avg(ratings.score) AS score 
-			FROM events INNER JOIN ratings ON (events.id = ratings.id_event) 
-			GROUP BY events.id;
+			SELECT events.id, events.id_council, events.type, events.description, events.created_at, events.modified_at, AVG(IFNULL(ratings.score,0)) AS score 
+			FROM events LEFT JOIN ratings ON (events.id = ratings.id_event) 
+			GROUP BY events.id
+			ORDER BY events.id;
 		`);
 
 		res.send({

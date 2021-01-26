@@ -1,13 +1,20 @@
 const sharp = require('sharp');
 const path = require('path');
 const uuid = require('uuid');
-const { ensureDir } = require('fs-extra');
+const { ensureDir, unlink } = require('fs-extra');
+const crypto = require('crypto');
+const sgMail = require('@sendgrid/mail');
 
+const { UPLOADS_DIRECTORY } = process.env;
+const uploadsDir = path.join(__dirname, UPLOADS_DIRECTORY);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+/**
+ * ####################
+ * ##  Guardar foto  ##
+ * ####################
+ */
 const savePhoto = async (photoData) => {
-	const { UPLOADS_DIRECTORY } = process.env;
-
-	const uploadsDir = path.join(__dirname, UPLOADS_DIRECTORY);
-
 	await ensureDir(uploadsDir);
 
 	const photo = sharp(photoData.data);
@@ -25,6 +32,53 @@ const savePhoto = async (photoData) => {
 	return photoName;
 };
 
+/**
+ * ###################
+ * ##  Borrar foto  ##
+ * ###################
+ */
+const deletePhoto = async (photoName) => {
+	const photoPath = path.join(uploadsDir, photoName);
+	await unlink(photoPath);
+};
+
+/**
+ * #####################
+ * ##  Random String  ##
+ * #####################
+ */
+const randomString = (length) => {
+	return crypto.randomBytes(length).toString('hex');
+};
+
+/**
+ * ############
+ * ##  Mail  ##
+ * ############
+ */
+const sendMail = async ({ to, subject, body }) => {
+	try {
+		const msg = {
+			to,
+			from: process.env.SENDGRID_FROM,
+			subject,
+			text: body,
+			html: `
+				<div>
+					<h1>${subject}</h1>
+					<p>${body}</p>
+				</div>
+			`,
+		};
+		await sgMail.send(msg);
+	} catch (error) {
+		throw new Error('There was an error sending confirmation email!');
+	}
+};
+
 module.exports = {
 	savePhoto,
+	deletePhoto,
+	randomString,
+	sendMail,
 };

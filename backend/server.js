@@ -4,17 +4,38 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const morgan = require('morgan');
 const fileUpload = require('express-fileupload');
+const eventExists = require('./middlewares/eventExist');
+const isUser = require('./middlewares/isUser');
+const canEdit = require('./middlewares/canEdit');
 
 const {
 	listEvents,
 	getEvent,
 	favEvents,
 	newEvent,
-} = require('./controllers/index.js');
+	newEventPhoto,
+	editEvent,
+	deleteEvent,
+	deleteEventPhoto,
+	newComment,
+	editComment,
+	deleteComment,
+	newRating,
+	editRating,
+	deleteRating,
+} = require('./controllers/events/index.js');
+
+const { newUser, validateUser, loginUser } = require('./controllers/users');
 
 const { PORT } = process.env;
 
 const app = express();
+
+/**
+ * #################
+ * ## MIDDLEWARES ##
+ * #################
+ */
 
 // Middleware que indica la ruta a los archivos estáticos.
 app.use(express.static(path.join(__dirname, 'static')));
@@ -32,22 +53,67 @@ app.use(fileUpload());
 app.use(morgan('dev'));
 
 /**
+ * ####################
+ * ## RUTAS USUARIOS ##
+ * ####################
+ */
+
+// * Crear usuario.
+app.post('/users', newUser);
+
+// * Validar usuario.
+app.get('/users/validate/:regCode', validateUser);
+
+// * Login usuario.
+app.post('/users/login', loginUser);
+
+/**
  * ###############
  * ## RUTAS API ##
  * ###############
  */
 
-// Devuelve todos los eventos.
+// * Crear nuevo evento.
+app.post('/events/:idUser', isUser, newEvent);
+
+// ! Agregar foto a evento.
+app.post('/events/:idEvent/photos', newEventPhoto);
+
+// ! Devolver eventos.
 app.get('/events', listEvents);
 
-// Devuelve un evento concreto.
-app.get('/events/:idEvent', getEvent);
+// ! Devolver evento concreto.
+app.get('/events/:idEvent', eventExists, getEvent);
 
-// Devuelve los eventos favoritos de un usuario.
-app.get('/events/favourites/:idUser', favEvents);
+// ! Devolver eventos favoritos.
+app.get('/events/:idUser/favourites', favEvents);
 
-// Creo un  nuevo evento.
-app.post('/events', newEvent);
+// * Editar evento.
+app.put('/events/:idEvent', isUser, eventExists, canEdit, editEvent);
+
+// * Eliminar evento.
+app.delete('/events/:idEvent', isUser, eventExists, canEdit, deleteEvent);
+
+// ! Eliminar foto asignada a evento.
+app.delete('/events/:idEvent/photos/:idPhoto', eventExists, deleteEventPhoto);
+
+// ! Crear comentario.
+app.post('/events/:idEvent/comments/:idUser', eventExists, newComment);
+
+// ! Editar comentario.
+app.put('/events/:idEvent/comments/:idComment', editComment);
+
+// ! Eliminar comentario.
+app.delete('/events/:idEvent/comments/:idComment', deleteComment);
+
+// ! Valorar evento.
+app.post('/events/:idEvent/ratings/:idUser', eventExists, newRating);
+
+// ! Editar valoración.
+app.put('/events/:idEvent/ratings/:idRating', editRating);
+
+// ! Eliminar valoración.
+app.delete('/events/:idEvent/ratings/:idRating', deleteRating);
 
 /**
  * ###########

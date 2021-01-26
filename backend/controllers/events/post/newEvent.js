@@ -7,7 +7,9 @@ const newEvent = async (req, res, next) => {
 	try {
 		connection = await getDB();
 
-		const { type, description, id_council, id_user } = req.body;
+		const { type, description, idCouncil } = req.body;
+
+		const idUser = req.userAuth.id;
 
 		if (!type) {
 			const error = new Error('Input "type" is required!');
@@ -19,7 +21,7 @@ const newEvent = async (req, res, next) => {
 			result,
 		] = await connection.query(
 			'INSERT INTO events (type, description, id_council, id_user) VALUES (?, ?, ?, ?);',
-			[type, description, id_council, id_user]
+			[type, description, idCouncil, idUser]
 		);
 
 		const { insertId } = result;
@@ -33,9 +35,7 @@ const newEvent = async (req, res, next) => {
 				photos.push(photoFile);
 
 				await connection.query(
-					`
-					INSERT INTO events_photos (photo, id_event) VALUES (?, ?)
-				`,
+					'INSERT INTO events_photos (photo, id_event) VALUES (?, ?);',
 					[photoFile, insertId]
 				);
 			}
@@ -45,14 +45,13 @@ const newEvent = async (req, res, next) => {
 			status: 'ok',
 			data: {
 				id: insertId,
-				type: type,
-				description: description,
+				type,
+				description,
 				score: 0,
-				photos: photos,
-				id_council: id_council,
-				id_user: id_user,
+				photos,
+				id_council: idCouncil,
+				id_user: idUser,
 				created_at: new Date(),
-				modified_at: null,
 			},
 		});
 	} catch (error) {

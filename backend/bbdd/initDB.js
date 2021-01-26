@@ -15,9 +15,9 @@ async function main() {
 		await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
 
 		// Eliminar tablas si existen
-		await connection.query('DROP TABLE IF EXISTS communities;');
+		/* await connection.query('DROP TABLE IF EXISTS communities;');
 		await connection.query('DROP TABLE IF EXISTS provinces;');
-		await connection.query('DROP TABLE IF EXISTS councils;');
+		await connection.query('DROP TABLE IF EXISTS councils;'); */
 		await connection.query('DROP TABLE IF EXISTS users;');
 		await connection.query('DROP TABLE IF EXISTS events;');
 		await connection.query('DROP TABLE IF EXISTS events_photos;');
@@ -27,7 +27,7 @@ async function main() {
 
 		console.log('Tablas borradas');
 
-		// Communities
+		/* // Communities
 		await connection.query(`
             CREATE TABLE IF NOT EXISTS communities (
                 id INT PRIMARY KEY, 
@@ -59,29 +59,35 @@ async function main() {
                 id_province INT NOT NULL,
                 FOREIGN KEY (id_province) REFERENCES provinces (id) 	
             );
-        `);
+        `); */
 
 		// Users
 		await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT PRIMARY KEY AUTO_INCREMENT, 
+				role ENUM("admin", "normal") DEFAULT "normal" NOT NULL,
                 name VARCHAR(50) NOT NULL UNIQUE,
                 email VARCHAR(50) NOT NULL UNIQUE,
-                password VARCHAR(100) NOT NULL,
-                avatar VARCHAR(50),
+                password VARCHAR(512) NOT NULL,
+				avatar VARCHAR(50),
+				active BOOLEAN DEFAULT false,
+				reg_code VARCHAR(100),
+				lastAuthUpdate TIMESTAMP,
+				deleted BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             );
         `);
 
-		//
+		// Events
 		await connection.query(`
             CREATE TABLE IF NOT EXISTS events (
                 id INT PRIMARY KEY AUTO_INCREMENT, 
                 type VARCHAR(50) NOT NULL,
                 description VARCHAR(300),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP,
+				modified_at TIMESTAMP,
+				deleted BOOLEAN DEFAULT false,
                 id_council INT NOT NULL,
                 FOREIGN KEY (id_council) REFERENCES councils (id),
                 id_user INT NOT NULL,
@@ -117,7 +123,7 @@ async function main() {
 		await connection.query(`
             CREATE TABLE IF NOT EXISTS comments (
                 id INT PRIMARY KEY AUTO_INCREMENT, 
-                text VARCHAR(50) NOT NULL,
+                text VARCHAR(300) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 modified_at TIMESTAMP,
                 id_user INT NOT NULL,
@@ -132,12 +138,13 @@ async function main() {
             CREATE TABLE IF NOT EXISTS ratings (
                 id INT PRIMARY KEY AUTO_INCREMENT, 
                 score TINYINT UNSIGNED NOT NULL,
+				CONSTRAINT ratings_score_CK1 CHECK (score IN (1,2,3,4,5)),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 modified_at TIMESTAMP,
                 id_user INT NOT NULL,
                 FOREIGN KEY (id_user) REFERENCES users (id),
                 id_event INT NOT NULL,
-                FOREIGN KEY (id_event) REFERENCES events (id)
+				FOREIGN KEY (id_event) REFERENCES events (id)
             );
         `);
 
@@ -148,7 +155,7 @@ async function main() {
 
 		// Almacenamos los datos de todos los lugares.
 		try {
-			const communitiesResponse = await axios.get(
+			/* const communitiesResponse = await axios.get(
 				`http://apiv1.geoapi.es/comunidades?key=${GEO_API_KEY}`
 			);
 
@@ -196,35 +203,35 @@ async function main() {
 				console.log(`Lista municipios ${councilsCounter.toFixed(2)}%`);
 				councilsCounter += 1.923;
 			}
-			console.log('Municipios insertados');
+			console.log('Municipios insertados'); */
 
 			// Insertamos usuarios.
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("david98", "david.rego@gmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active, role) VALUES ("david98", "david.rego@gmail.com", SHA2("123456", 512), true, "admin");'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("zeus123", "jandro_1990@gmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("zeus123", "jandro_1990@gmail.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("porcoteixo", "isabel.mora@yahoo.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("porcoteixo", "isabel.mora@yahoo.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("Gallu", "renatinho43@hotmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("Gallu", "renatinho43@hotmail.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("Filomeno", "ferguson@gmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("Filomeno", "ferguson@gmail.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("robocop", "eusebio_martinez@gmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("robocop", "eusebio_martinez@gmail.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("GatoVolador", "mariadiva@yahoo.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("GatoVolador", "mariadiva@yahoo.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("Kike", "lucia3452@hotmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("Kike", "lucia3452@hotmail.com", SHA2("123456", 512), true);'
 			);
 			await connection.query(
-				'INSERT INTO users (name, email, password) VALUES ("Cazafantasmas", "españolito98@gmail.com", "123456");'
+				'INSERT INTO users (name, email, password, active) VALUES ("Cazafantasmas", "españolito98@gmail.com", SHA2("123456", 512), true);'
 			);
 
 			console.log('Usuarios insertados.');

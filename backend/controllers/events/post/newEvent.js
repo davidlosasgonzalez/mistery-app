@@ -1,64 +1,66 @@
 const getDB = require('../../../bbdd/db.js');
-const { savePhoto } = require('../../../helpers.js');
+const { validate, savePhoto } = require('../../../helpers.js');
+const { newEntrySchema } = require('../../../schemas');
 
 const newEvent = async (req, res, next) => {
-	let connection;
+  let connection;
 
-	try {
-		connection = await getDB();
+  try {
+    connection = await getDB();
 
-		const { type, description, idCouncil } = req.body;
+    await validate(newEntrySchema, req.body);
 
-		const idUser = req.userAuth.id;
+    const { type, description, idCouncil } = req.body;
 
-		if (!type) {
-			const error = new Error('Input "type" is required!');
-			error.httpStatus = 400;
-			throw error;
-		}
+    const idUser = req.userAuth.id;
 
-		const [
-			result,
-		] = await connection.query(
-			'INSERT INTO events (type, description, id_council, id_user) VALUES (?, ?, ?, ?);',
-			[type, description, idCouncil, idUser]
-		);
+    if (!type) {
+      const error = new Error('Input "type" is required!');
+      error.httpStatus = 400;
+      throw error;
+    }
 
-		const { insertId } = result;
+    const [
+      result,
+    ] = await connection.query('INSERT INTO events (type, description, id_council, id_user) VALUES (?, ?, ?, ?);', [
+      type,
+      description,
+      idCouncil,
+      idUser,
+    ]);
 
-		const photos = [];
+    const { insertId } = result;
 
-		if (req.files && Object.keys(req.files).length > 0) {
-			for (const photoData of Object.values(req.files).slice(0, 4)) {
-				const photoFile = await savePhoto(photoData);
+    const photos = [];
 
-				photos.push(photoFile);
+    if (req.files && Object.keys(req.files).length > 0) {
+      for (const photoData of Object.values(req.files).slice(0, 4)) {
+        const photoFile = await savePhoto(photoData);
 
-				await connection.query(
-					'INSERT INTO events_photos (photo, id_event) VALUES (?, ?);',
-					[photoFile, insertId]
-				);
-			}
-		}
+        photos.push(photoFile);
 
-		res.send({
-			status: 'ok',
-			data: {
-				id: insertId,
-				type,
-				description,
-				score: 0,
-				photos,
-				id_council: idCouncil,
-				id_user: idUser,
-				created_at: new Date(),
-			},
-		});
-	} catch (error) {
-		next(error);
-	} finally {
-		if (connection) connection.release();
-	}
+        await connection.query('INSERT INTO events_photos (photo, id_event) VALUES (?, ?);', [photoFile, insertId]);
+      }
+    }
+
+    res.send({
+      status: 'ok',
+      data: {
+        id: insertId,
+        type,
+        description,
+        score: 0,
+        photos,
+        id_council: idCouncil,
+        id_user: idUser,
+        created_at: new Date(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    if (connection) connection.release();
+  }
 };
 
 module.exports = newEvent;

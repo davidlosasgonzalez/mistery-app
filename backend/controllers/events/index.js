@@ -6,6 +6,8 @@
 const listEvents = require('./get/listEvents.js');
 const getEvent = require('./get/getEvent.js');
 const favEvents = require('./get/favEvents.js');
+const newFavEvent = require('./post/newFavEvent.js');
+const deleteFavEvent = require('./delete/deleteFavEvent.js');
 const newEvent = require('./post/newEvent.js');
 const newEventPhoto = require('./post/newEventPhoto.js');
 const editEvent = require('./put/editEvent.js');
@@ -17,6 +19,7 @@ const deleteEventPhoto = require('./delete/deleteEventPhoto.js');
  * ## Comments ##
  * ##############
  */
+const getComments = require('./get/getComments.js');
 const newComment = require('./post/newComment.js');
 const editComment = require('./put/editComment.js');
 const deleteComment = require('./delete/deleteComment.js');
@@ -36,18 +39,21 @@ const deleteRating = require('./delete/deleteRating.js');
  * #############
  */
 module.exports = {
-	listEvents,
-	getEvent,
-	favEvents,
-	newEvent,
-	newEventPhoto,
-	editEvent,
-	deleteEvent,
-	deleteEventPhoto,
-	newComment,
-	editComment,
-	deleteComment,
-	newRating,
-	editRating,
-	deleteRating,
+  listEvents,
+  getEvent,
+  favEvents,
+  newFavEvent,
+  deleteFavEvent,
+  newEvent,
+  newEventPhoto,
+  editEvent,
+  deleteEvent,
+  deleteEventPhoto,
+  getComments,
+  newComment,
+  editComment,
+  deleteComment,
+  newRating,
+  editRating,
+  deleteRating,
 };

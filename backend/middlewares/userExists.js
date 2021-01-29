@@ -1,17 +1,17 @@
 const getDB = require('../bbdd/db');
 
-const eventExists = async (req, res, next) => {
+const userExists = async (req, res, next) => {
   let connection;
 
   try {
     connection = await getDB();
 
-    const { idEvent } = req.params;
+    const { idUser } = req.params;
 
-    const [result] = await connection.query('SELECT id FROM events WHERE id=?;', [idEvent]);
+    const [result] = await connection.query('SELECT id FROM users WHERE id=? AND deleted=0;', [idUser]);
 
     if (result.length === 0) {
-      const error = new Error(`Place doesn't exist!`);
+      const error = new Error(`User not found!`);
       error.httpStatus = 404;
       throw error;
     }
@@ -23,4 +23,4 @@ const eventExists = async (req, res, next) => {
   }
 };
 
-module.exports = eventExists;
+module.exports = userExists;

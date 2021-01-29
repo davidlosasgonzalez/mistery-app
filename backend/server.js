@@ -5,27 +5,41 @@ const path = require('path');
 const morgan = require('morgan');
 const fileUpload = require('express-fileupload');
 const eventExists = require('./middlewares/eventExist');
-const isUser = require('./middlewares/isUser');
+const isUser = require('./middlewares/isUser'); // ? Desactivada la comprobación del token.
 const canEdit = require('./middlewares/canEdit');
+const userExists = require('./middlewares/userExists');
 
 const {
-	listEvents,
-	getEvent,
-	favEvents,
-	newEvent,
-	newEventPhoto,
-	editEvent,
-	deleteEvent,
-	deleteEventPhoto,
-	newComment,
-	editComment,
-	deleteComment,
-	newRating,
-	editRating,
-	deleteRating,
+  listEvents,
+  getEvent,
+  favEvents,
+  newFavEvent,
+  deleteFavEvent,
+  newEvent,
+  newEventPhoto,
+  editEvent,
+  deleteEvent,
+  deleteEventPhoto,
+  getComments,
+  newComment,
+  editComment,
+  deleteComment,
+  newRating,
+  editRating,
+  deleteRating,
 } = require('./controllers/events/index.js');
 
-const { newUser, validateUser, loginUser } = require('./controllers/users');
+const {
+  newUser,
+  validateUser,
+  loginUser,
+  getUser,
+  deleteUser,
+  editUser,
+  editUserPassword,
+  recoveryUserPassword,
+  resetUserPassword,
+} = require('./controllers/users');
 
 const { PORT } = process.env;
 
@@ -40,10 +54,10 @@ const app = express();
 // Middleware que indica la ruta a los archivos estáticos.
 app.use(express.static(path.join(__dirname, 'static')));
 
-// To support JSON-encoded bodies.
+// Soporte JSON-encoded bodies.
 app.use(bodyParser.json());
 
-// To support URL-encoded bodies.
+// Soporte URL-encoded bodies.
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Body parser (multipart form data).
@@ -58,14 +72,32 @@ app.use(morgan('dev'));
  * ####################
  */
 
-// * Crear usuario.
+// Crear usuario.
 app.post('/users', newUser);
 
-// * Validar usuario.
+// Validar usuario.
 app.get('/users/validate/:regCode', validateUser);
 
-// * Login usuario.
+//  Login usuario.
 app.post('/users/login', loginUser);
+
+//  Obtener info sobre usuario.
+app.get('/users/:idUser', isUser, userExists, getUser);
+
+//  Editar información de usuario.
+app.put('/users/:idUser', isUser, userExists, editUser);
+
+// TODO: Editar contraseña de usuario. Pendiente modificar "lastAuthUpdate".
+app.put('/users/:idUser/password', isUser, userExists, editUserPassword);
+
+// TODO: Desactivar usuario. Pendiente modificar la columna "name" del usuario.
+app.delete('/users/:idUser', isUser, userExists, deleteUser);
+
+// Enviar email para recuperar contraseña usuario.
+app.post('/users/recovery', recoveryUserPassword);
+
+// Recuperar contraseña usuario.
+app.post('/users/reset', resetUserPassword);
 
 /**
  * ###############
@@ -73,47 +105,56 @@ app.post('/users/login', loginUser);
  * ###############
  */
 
-// * Crear nuevo evento.
-app.post('/events/:idUser', isUser, newEvent);
+//  Crear nuevo evento.
+app.post('/events', isUser, newEvent);
 
-// ! Agregar foto a evento.
-app.post('/events/:idEvent/photos', newEventPhoto);
+//  Agregar foto a evento.
+app.post('/events/:idEvent/photos', isUser, eventExists, canEdit, newEventPhoto);
 
-// ! Devolver eventos.
+//  Devolver eventos.
 app.get('/events', listEvents);
 
-// ! Devolver evento concreto.
+//  Devolver evento concreto.
 app.get('/events/:idEvent', eventExists, getEvent);
 
-// ! Devolver eventos favoritos.
-app.get('/events/:idUser/favourites', favEvents);
+//  Devolver eventos favoritos.
+app.get('/events/favourites/list', isUser, favEvents);
 
-// * Editar evento.
+//  Agregar un evento a la lista de favoritos.
+app.post('/events/:idEvent/favourites', isUser, eventExists, newFavEvent);
+
+//  Eliminar un evento de la lista de favoritos.
+app.delete('/events/:idEvent/favourites', isUser, eventExists, canEdit, deleteFavEvent);
+
+//  Editar evento.
 app.put('/events/:idEvent', isUser, eventExists, canEdit, editEvent);
 
-// * Eliminar evento.
+//  Eliminar evento.
 app.delete('/events/:idEvent', isUser, eventExists, canEdit, deleteEvent);
 
-// ! Eliminar foto asignada a evento.
-app.delete('/events/:idEvent/photos/:idPhoto', eventExists, deleteEventPhoto);
+//  Eliminar foto asignada a evento.
+app.delete('/events/:idEvent/photos/:idPhoto', isUser, eventExists, canEdit, deleteEventPhoto);
 
-// ! Crear comentario.
-app.post('/events/:idEvent/comments/:idUser', eventExists, newComment);
+// Listar comentarios de un evento.
+app.get('/events/:idEvent/comments', getComments);
 
-// ! Editar comentario.
-app.put('/events/:idEvent/comments/:idComment', editComment);
+//  Crear comentario.
+app.post('/events/:idEvent/comments', isUser, eventExists, newComment);
 
-// ! Eliminar comentario.
-app.delete('/events/:idEvent/comments/:idComment', deleteComment);
+//  Editar comentario.
+app.put('/events/:idEvent/comments/:idComment', isUser, eventExists, canEdit, editComment);
 
-// ! Valorar evento.
-app.post('/events/:idEvent/ratings/:idUser', eventExists, newRating);
+//  Eliminar comentario.
+app.delete('/events/:idEvent/comments/:idComment', isUser, eventExists, deleteComment);
 
-// ! Editar valoración.
-app.put('/events/:idEvent/ratings/:idRating', editRating);
+//  Valorar evento.
+app.post('/events/:idEvent/ratings', isUser, eventExists, newRating);
 
-// ! Eliminar valoración.
-app.delete('/events/:idEvent/ratings/:idRating', deleteRating);
+//  Editar valoración.
+app.put('/events/:idEvent/ratings/:idRating', isUser, eventExists, editRating);
+
+//  Eliminar valoración.
+app.delete('/events/:idEvent/ratings/:idRating', isUser, eventExists, deleteRating);
 
 /**
  * ###########
@@ -123,21 +164,21 @@ app.delete('/events/:idEvent/ratings/:idRating', deleteRating);
 
 // Middleware de error.
 app.use((error, req, res, next) => {
-	console.error(error);
-	res.status(error.httpStatus || 500).send({
-		status: 'error',
-		message: error.message,
-	});
+  console.error(error);
+  res.status(error.httpStatus || 500).send({
+    status: 'error',
+    message: error.message,
+  });
 });
 
 // Middleware de no encontrado.
 app.use((req, res) => {
-	res.status(404).send({
-		status: 'error',
-		message: 'Not found',
-	});
+  res.status(404).send({
+    status: 'error',
+    message: 'Not found',
+  });
 });
 
 app.listen(PORT, () => {
-	console.log(`Server working at port http://localhost:${PORT}`);
+  console.log(`Server working at port http://localhost:${PORT}`);
 });

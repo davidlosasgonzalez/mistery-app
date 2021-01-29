@@ -1,40 +1,45 @@
 const getDB = require('../../../bbdd/db.js');
+const { validate } = require('../../../helpers');
+const { editEventSchema } = require('../../../schemas');
 
 const editEvent = async (req, res, next) => {
-	let connection;
+  let connection;
 
-	try {
-		connection = await getDB();
+  try {
+    connection = await getDB();
 
-		const { idEvent } = req.params;
+    validate(editEventSchema, req.body);
 
-		const { type, description } = req.body;
+    const { idEvent } = req.params;
 
-		if (!type || !description) {
-			const error = new Error('Fields are missing!');
-			error.httpStatus = 400;
-			throw error;
-		}
+    const { type, description } = req.body;
 
-		await connection.query(
-			'UPDATE events SET type=?, description=?, modified_at=CURRENT_TIMESTAMP WHERE id=?;',
-			[type, description, idEvent]
-		);
+    if (!type || !description) {
+      const error = new Error('Fields are missing!');
+      error.httpStatus = 400;
+      throw error;
+    }
 
-		res.send({
-			status: 'ok',
-			data: {
-				idEvent,
-				type,
-				description,
-				modified_at: new Date(),
-			},
-		});
-	} catch (error) {
-		next(error);
-	} finally {
-		if (connection) connection.release();
-	}
+    await connection.query('UPDATE events SET type=?, description=?, modified_at=CURRENT_TIMESTAMP WHERE id=?;', [
+      type,
+      description,
+      idEvent,
+    ]);
+
+    res.send({
+      status: 'ok',
+      data: {
+        idEvent,
+        type,
+        description,
+        modified_at: new Date(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    if (connection) connection.release();
+  }
 };
 
 module.exports = editEvent;

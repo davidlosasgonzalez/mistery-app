@@ -15,21 +15,33 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
  * ####################
  */
 const savePhoto = async (photoData) => {
-	await ensureDir(uploadsDir);
+  try {
+    await ensureDir(uploadsDir);
 
-	const photo = sharp(photoData.data);
+    const photo = sharp(photoData.data);
 
-	const photoInfo = await photo.metadata();
+    const photoInfo = await photo.metadata();
 
-	const PHOTO_MAX_WIDTH = 1000;
+    const FORMAT = photoInfo.format;
 
-	if (photoInfo.width > PHOTO_MAX_WIDTH) photo.resize(PHOTO_MAX_WIDTH);
+    if (FORMAT !== 'png' && FORMAT !== 'jpg' && FORMAT !== 'jpeg') {
+      throw new Error();
+    }
 
-	const photoName = `${uuid.v4()}.jpg`;
+    const PHOTO_MAX_WIDTH = 1000;
 
-	await photo.toFile(path.join(uploadsDir, photoName));
+    if (photoInfo.width > PHOTO_MAX_WIDTH) photo.resize(PHOTO_MAX_WIDTH);
 
-	return photoName;
+    const photoName = `${uuid.v4()}.jpg`;
+
+    await photo.toFile(path.join(uploadsDir, photoName));
+
+    return photoName;
+  } catch (e) {
+    const error = new Error('Wrong image format! Only .png and .jpg formats are supported.');
+    error.httpStatus = 400;
+    throw error;
+  }
 };
 
 /**
@@ -38,8 +50,8 @@ const savePhoto = async (photoData) => {
  * ###################
  */
 const deletePhoto = async (photoName) => {
-	const photoPath = path.join(uploadsDir, photoName);
-	await unlink(photoPath);
+  const photoPath = path.join(uploadsDir, photoName);
+  await unlink(photoPath);
 };
 
 /**
@@ -48,7 +60,7 @@ const deletePhoto = async (photoName) => {
  * #####################
  */
 const randomString = (length) => {
-	return crypto.randomBytes(length).toString('hex');
+  return crypto.randomBytes(length).toString('hex');
 };
 
 /**
@@ -57,28 +69,45 @@ const randomString = (length) => {
  * ############
  */
 const sendMail = async ({ to, subject, body }) => {
-	try {
-		const msg = {
-			to,
-			from: process.env.SENDGRID_FROM,
-			subject,
-			text: body,
-			html: `
+  try {
+    const msg = {
+      to,
+      from: process.env.SENDGRID_FROM,
+      subject,
+      text: body,
+      html: `
 				<div>
 					<h1>${subject}</h1>
 					<p>${body}</p>
 				</div>
 			`,
-		};
-		await sgMail.send(msg);
-	} catch (error) {
-		throw new Error('There was an error sending confirmation email!');
-	}
+    };
+    await sgMail.send(msg);
+  } catch (error) {
+    throw new Error('There was an error sending confirmation email!');
+  }
+};
+
+/**
+ * ################
+ * ##  Validate  ##
+ * ################
+ */
+const validate = async (schema, data) => {
+  try {
+    await schema.validateAsync(data);
+  } catch (e) {
+    const error = new Error();
+    error.httpStatus = 400;
+    error.message = e.message;
+    throw error;
+  }
 };
 
 module.exports = {
-	savePhoto,
-	deletePhoto,
-	randomString,
-	sendMail,
+  savePhoto,
+  deletePhoto,
+  randomString,
+  sendMail,
+  validate,
 };
